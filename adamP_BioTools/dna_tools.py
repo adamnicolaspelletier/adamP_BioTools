@@ -92,18 +92,16 @@ def regenerateseq(degeneratestring, format):
 	seqfinal = []
 
 	if format == "numpy":
-        for i in seqcombbeta:
-            b = matrixmaker("".join(i))
-            seqfinal.append(b)
-        return seqfinal
-
-    
-    elif format == "string":
-        for i in seqcombdbeta:
-            b = "".join(i)
-            seqfinal.append(b)
-        return seqfinal
+		for i in seqcombbeta:
+			b = matrixmaker("".join(i))
+			seqfinal.append(b)
 		
+	elif format == "string":
+		for i in seqcombdbeta:
+		b = "".join(i)
+		seqfinal.append(b)
+		
+	
 	return seqfinal 
 
 
