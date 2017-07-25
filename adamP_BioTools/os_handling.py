@@ -1,6 +1,6 @@
 import os
 import glob
-
+import sys
 
 def path_validity(path):
 	""" Verifies if a given OS path already exists, if it is writtable or if it impossible to write at this location. Works for both files and directories, 
