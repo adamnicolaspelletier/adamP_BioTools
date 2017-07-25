@@ -53,7 +53,9 @@ def matrixconverter(seqmatrix, dic):
 		seqstring += dic[i[1]]
 	return seqstring
 
-def regenerateseq(degeneratestring):
+
+
+def regenerateseq(degeneratestring, format):
 	""" Generates an iterable list of possible sequences in unambiguous IUPAC format based on a IUPACdegenerate sequence. Ex: ATN = [ATT, ATG, ATC, ATA].
 	The idea relies on the fact that each IUPAC letters that yields 2 distinct nucleotides has 2 Sequences. So a string with 2 such letters has 2 ^2 sequences. 
 	n letters has 2^n sequences. The same logic applies for 3 letters, or 4 letters, with 3^n and 4^n The total number of sequences is thus 2^n(2) * 3^n(3) * 4^n(4). """
@@ -88,14 +90,24 @@ def regenerateseq(degeneratestring):
 	seqcombbeta = list(itertools.product(*seqcomb)) # generate a list of all possible combinations 
 
 	seqfinal = []
-	for i in seqcombbeta:
-		a = list(i)
-		b = matrixmaker("".join(a)) # is returned in array format to align with PWMs easily
-		seqfinal.append(b)
+
+	if format == "numpy":
+        for i in seqcombbeta:
+            b = matrixmaker("".join(i))
+            seqfinal.append(b)
+        return seqfinal
+
+    
+    elif format == "string":
+        for i in seqcombdbeta:
+            b = "".join(i)
+            seqfinal.append(b)
+        return seqfinal
 		
 	return seqfinal 
 
-def randomseq(length):   
+
+def randomseq(length, format):   
 	""" Generate a random n length DNA sequence as a matrix"""
 	matrix = np.zeros( (4, length) )
 	index = []
@@ -103,6 +115,11 @@ def randomseq(length):
 	    index.append([random.randrange(0,4,1), i]) 
 	a = np.array(index)  
 	matrix[a[:,0], a[:,1]] = 1
+
+	if format == "numpy":
+		return matrix
+	elif format == "string":
+		return matrixmaker(matrix)
 	return matrix
 
 
