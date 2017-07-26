@@ -98,8 +98,8 @@ def regenerateseq(degeneratestring, format):
 		
 	elif format == "string":
 		for i in seqcombdbeta:
-		b = "".join(i)
-		seqfinal.append(b)
+			b = "".join(i)
+			seqfinal.append(b) 
 		
 	
 	return seqfinal 
@@ -179,3 +179,34 @@ def save_pssm(pfm_file, outfile):
 	df_motif = df_motif.set_index("Pos")
 	df_motif.to_csv(outfile, sep="\t")
 
+
+
+def corescan(filename, core):
+    """ Takes a core consensus motif and scans a numpy PSSM for the best alignment site, then returns the score. """
+    mat =  np.ones( (4, 20) ) /4 #Creates a buffer array to flank the main PSSM for iterationbs over longer distances. 
+    matlog2 = np.log2((mat/0.8)) 
+    matlog = matlog2 *2  # This ensures that this buffer sequence is less likely to be aligned with the sequence to prevent unspecific interactions, yet still allows alignment.
+
+    pssm = np.loadtxt(filename, skiprows=1)
+    pssmf = pssm[:,1:].transpose()
+
+    iterpssm = np.concatenate((matlog, pssmf, matlog), axis=1) #iterable PSSM , flanked by buffer arrays
+
+    lenpssm = len(iterpssm.transpose())
+
+    score = -1000
+    pos = 20
+    for j in regenerateseq(core, "numpy"):
+        beta = list(pssmwalk(iterpssm,j, 17)) 
+
+        betascore = beta[0]
+
+        betapos = beta[1]
+        
+        if betascore > score and betapos >= -18 and betapos <= (lenpssm-18) :
+            score = betascore
+            pos = betapos
+        else:
+            pass
+
+    return score,pos
