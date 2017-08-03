@@ -15,7 +15,19 @@ def topseq(filename):
 		seqstring += dic[i]
 	return seqstring # returns the top motif
 
-def reversecomp(rprimsequence): ## make a complement version of the sequence, and reverse it so it has the proper orientation
+def topseq_array(numpyarray):  
+	"""Takes a PSSM as a numpy array and generates the string corresponding to the highest probable LOG-odds score at each position"""
+	dic = {0:"A",1:"C",2:"G",3:"T"}  # dictionary of indexes of each nucleotide for matrices
+	# tf1 = np.loadtxt(filename, skiprows=1)
+	# tf2 = tf1[:,1:].transpose()
+	indexes = np.argmax(numpyarray,axis=0).tolist()  #generates a list of indexes of the highest probability base per position. 
+	seqstring = ""
+	for i in indexes: #generates a string nucleotide sequence corresponding top nucleotide for each position
+		seqstring += dic[i]
+	return seqstring # returns the top motif
+  
+def reversecomp(rprimsequence): 
+""" Make a complement version of the sequence, and reverse it so it has the proper orientation. Both input and output are strings"""
 	a = ""
 	tempzrev = rprimsequence
 	tempzrev = tempzrev.replace("T","X")
@@ -35,7 +47,7 @@ def matrixmaker(dnastring):
 	""" Generates a numpy array from a DNA sequence string, made from ones and zeros. 2D representation of a DNA sequence. 
 	Complements the matrixconverter function""" 
 	lettersinv = {"A":0,"C":1,"G":2,"T":3}
-	matrix = np.zeros( (4, len(dnastring)) ) # Make a MAtrix full of zeros of of the length of the DNA string
+	matrix = np.zeros( (4, len(dnastring)) ) # Make a matrix full of zeros of of the length of the DNA string
 	index = []
 	for i in range(len(dnastring)):    
 		index.append([lettersinv[list(dnastring)[i]], i]) #convert the string into a list of indexes that correspond to those same bases from tge lettersinv dict
@@ -44,7 +56,7 @@ def matrixmaker(dnastring):
 	
 	return matrix
 
-def matrixconverter(seqmatrix, dic): 
+def matrixconverter(seqmatrix): 
 	"""Generates a DNA sequence string based on a NumPy matrix"""
 	dic = {0:"A",1:"C",2:"G",3:"T"}  # dictionary of indexes of each nucleotide for matrices
 	a = np.transpose(np.nonzero(np.transpose(seqmatrix))).tolist()
@@ -56,9 +68,8 @@ def matrixconverter(seqmatrix, dic):
 
 
 def regenerateseq(degeneratestring, format):
-	""" Generates an iterable list of possible sequences in unambiguous IUPAC format based on a IUPACdegenerate sequence. Ex: ATN = [ATT, ATG, ATC, ATA].
-	The idea relies on the fact that each IUPAC letters that yields 2 distinct nucleotides has 2 Sequences. So a string with 2 such letters has 2 ^2 sequences. 
-	n letters has 2^n sequences. The same logic applies for 3 letters, or 4 letters, with 3^n and 4^n The total number of sequences is thus 2^n(2) * 3^n(3) * 4^n(4). """
+	""" Generates an iterable list of possible sequences in unambiguous IUPAC format based on a IUPACdegenerate sequence. Ex: ATN = [ATT, ATG, ATC, ATA]. 
+	The Input is a IUPAC compatible string ; the output can either be a list of strings or a list of numpy arrays, depending on the options used."""
 	##IUPAC dictionary
 	lettersinv = {"A":0,"C":1,"G":2,"T":3}
 	
@@ -131,7 +142,7 @@ def read_pfm(filename):
 	motif.pseudocounts = .25
 	motif.background = {'A':0.3,'C':0.2,'G':0.2,'T':0.3}
 
-	return motif
+	return motif    
 
 def pearson_pssm(pfm1,pfm2):
 	""" takes 2 motif objects and performs a pearson correlation to obtain their offset, their distance, along with the length of each separate motif"""
@@ -144,15 +155,21 @@ def pearson_pssm(pfm1,pfm2):
 	return [1 - distance, offset,length1, length2]
 
 
-def pssmwalk(motif, sequence, pos): 
+def pssmwalk(motif, sequence, pos, inputformat): 
 	""" Tests each position of a SHORT DNA sequence as a numpy array against a pssm array. Returns the best alignment score. 
 	The Pos argument lets you define over which portion of the pwm you want to align. Add 0 for the whole thing. 
 	Useful when you add buffer random sequences on the site to align earlier than the 0 position for both array and sequence, or further than the length of the array"""
-	pssm = np.array(pd.DataFrame(motif)).transpose()
+	if inputformat == "numpy": # accepts both numpy PSSM matrices or Bio.motifs PFMs as input. both are then stored as a numpy array
+		pssm = motif
+
+	elif inputformat == "pfm":
+		pssm = np.array(pd.DataFrame(motif)).transpose()
+		
 	# make a buffer array of 0.25 probability accross the board. This will flank the real PWM and both sides. This will allow the 
 	# alignment of the PSSM a little before and after the CORE sequence, giving flexibility to the process without giving these buffer 
 	# sequences a strong probability to be the best alignment position. a log-odds of -1 is unprobable, without being 0. 
 	mat =  np.ones((4, 20)) * -1 
+
 	iterpssm = np.concatenate((mat, pssm, mat), axis=1) 
 
 	alphapos = 0
@@ -161,13 +178,19 @@ def pssmwalk(motif, sequence, pos):
 		try:
 			betapos = i 
 			betascore = np.sum(sequence * iterpssm[:,betapos:(betapos + sequence.shape[1])])
+
 			if betascore > alphascore:
 				alphascore = betascore
 				alphapos = betapos
 		except ValueError:
 			pass
+	prox = np.zeros((4,alphapos))
+	dist = np.zeros((4,(iterpssm.shape[1]-(sequence.shape[1]+alphapos))))
+	coreiter = np.transpose(np.concatenate((prox, sequence, dist), axis=1))
 
-	return [alphascore,alphapos]   
+
+	
+	return [alphascore,alphapos,iterpssm,coreiter]   
 
 
 def save_pssm(pfm_file, outfile):
@@ -183,30 +206,28 @@ def save_pssm(pfm_file, outfile):
 
 def corescan(filename, core):
     """ Takes a core consensus motif and scans a numpy PSSM for the best alignment site, then returns the score. """
-    mat =  np.ones( (4, 20) ) /4 #Creates a buffer array to flank the main PSSM for iterationbs over longer distances. 
-    matlog2 = np.log2((mat/0.8)) 
-    matlog = matlog2 *2  # This ensures that this buffer sequence is less likely to be aligned with the sequence to prevent unspecific interactions, yet still allows alignment.
-
+    
     pssm = np.loadtxt(filename, skiprows=1)
     pssmf = pssm[:,1:].transpose()
 
-    iterpssm = np.concatenate((matlog, pssmf, matlog), axis=1) #iterable PSSM , flanked by buffer arrays
+    # iterpssm = np.concatenate((matlog, pssmf, matlog), axis=1) #iterable PSSM , flanked by buffer arrays
 
-    lenpssm = len(iterpssm.transpose())
+    lenpssm = len(pssmf.transpose())
 
     score = -1000
-    pos = 20
+    pos = 0
     for j in regenerateseq(core, "numpy"):
-        beta = list(pssmwalk(iterpssm,j, 17)) 
+        beta = pssmwalk(pssmf,j, 0, "numpy")
+        
 
         betascore = beta[0]
 
         betapos = beta[1]
         
-        if betascore > score and betapos >= -18 and betapos <= (lenpssm-18) :
+        if betascore > score :
             score = betascore
             pos = betapos
         else:
             pass
 
-    return score,pos
+    return [score,pos,pssmf]
