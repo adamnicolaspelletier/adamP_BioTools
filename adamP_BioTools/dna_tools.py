@@ -234,7 +234,7 @@ def pssmwalk(motif, sequence, pos, inputformat):
 		pssm = motif
 
 	elif inputformat == "pfm":
-		pssm = np.array(pd.DataFrame(motif.pssm)).transpose()
+		pssm = np.array(pd.DataFrame(motif)).transpose()
 
 	# make a buffer array of 0.25 probability accross the board. This will flank the real PWM and both sides. This will allow the 
 	# alignment of the PSSM a little before and after the CORE sequence, giving flexibility to the process without giving these buffer 

@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='adamP_BioTools',
-	version='1.12',
+	version='1.14',
 	description='Personal Tools for working with biological data',
 	url='https://github.com/adamnicolaspelletier/adamP_BioTools',
 	author='Adam Pelletier',
