@@ -44,20 +44,20 @@ def reversecomp(sequence):
 
 	Example:   print reversecomp('AATTGGCC')
 				> 'GGCCAATT'"""
-	seqrc = ""
-	tempzrev = sequence
-	tempzrev = tempzrev.replace("T","X")
-	tempzrev = tempzrev.replace("A","T")
-	tempzrev = tempzrev.replace("X","A")
-	tempzrev = tempzrev.replace("C","Y")
-	tempzrev = tempzrev.replace("G","C")
-	tempzrev = tempzrev.replace("Y","G")
-	templist = list(tempzrev)
-	templist.reverse()
-	for i in templist:
-		seqrc += i
-	return seqrc
+	
+	rev_dict = {"A":"T", "T":"A", "C":"G", "G":"C" , "N": "N"}
+	rev_list = []
+	for i in list(sequence):
+		rev_list.append(rev_dict[i])
+	rev_list.reverse()
 
+	revcomp = ""
+
+	for i in rev_list:
+		revcomp += i
+
+	return revcomp
+	
 
 def matrixmaker(dnastring):   
 	""" Generates a numpy array from a DNA sequence string, made from ones and zeros. 2D representation of a DNA sequence, useful for alignment with 
